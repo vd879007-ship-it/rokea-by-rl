@@ -1,5 +1,7 @@
 .env
+.env.local
 node_modules/
+dist/
 .firebase/
-.env
 serviceAccountKey.json
+vite.config.js.timestamp-*
