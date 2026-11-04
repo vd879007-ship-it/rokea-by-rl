@@ -18,15 +18,13 @@ const REMINDER_THROTTLE_MINUTES = 1;
 export async function sendRealEmail({ userEmail, userName, subject, cart = [], wishlist = [], cartTotal = 0, emailHtml = '' }) {
   if (!userEmail) return { success: false, reason: 'No destination email' };
 
-  // Always use a clean public HTTPS URL in emails so Gmail never flags localhost links as spam
-  const siteUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
-    ? window.location.origin
-    : 'https://rokeabyrk.com';
+  // Official live domain for all customer email links
+  const siteUrl = 'https://rokeabyrk.com';
 
   const toSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
   const primaryItem = (Array.isArray(cart) && cart.length > 0) ? cart[0] : ((Array.isArray(wishlist) && wishlist.length > 0) ? wishlist[0] : null);
   const primarySlug = primaryItem ? (primaryItem.slug || toSlug(primaryItem.name) || primaryItem.id) : '';
-  const primaryProductUrl = primarySlug ? `${siteUrl}/product/${primarySlug}` : `${siteUrl}/collections`;
+  const primaryProductUrl = primarySlug ? `${siteUrl}/product/${primarySlug}` : siteUrl;
 
   const cartLines = (cart || []).map((item, idx) =>
     `${idx + 1}. ${item.name} - ₹${Number(item.price || 0).toLocaleString('en-IN')}`
@@ -181,18 +179,16 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
     ? cart.reduce((sum, item) => sum + (parseInt(item.price || 0, 10) * parseInt(item.quantity || 1, 10)), 0)
     : 0;
 
-  // Always use a clean public HTTPS URL in emails so Gmail never flags localhost links as spam
-  const siteUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
-    ? window.location.origin
-    : 'https://rokeabyrk.com';
+  // Official live domain for all customer communication
+  const siteUrl = 'https://rokeabyrk.com';
 
   const toSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
 
   const getProductHref = (item) => {
-    if (!item) return `${siteUrl}/collections`;
+    if (!item) return siteUrl;
     const target = item.slug || toSlug(item.name) || item.id;
     if (target) return `${siteUrl}/product/${target}`;
-    return `${siteUrl}/collections`;
+    return siteUrl;
   };
 
   const primaryItem = (hasCart && cart.length > 0) ? cart[0] : ((hasWishlist && wishlist.length > 0) ? wishlist[0] : null);
