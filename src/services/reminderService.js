@@ -23,6 +23,11 @@ export async function sendRealEmail({ userEmail, userName, subject, cart = [], w
     ? window.location.origin
     : 'https://rokeabyrk.com';
 
+  const toSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+  const primaryItem = (Array.isArray(cart) && cart.length > 0) ? cart[0] : ((Array.isArray(wishlist) && wishlist.length > 0) ? wishlist[0] : null);
+  const primarySlug = primaryItem ? (primaryItem.slug || toSlug(primaryItem.name) || primaryItem.id) : '';
+  const primaryProductUrl = primarySlug ? `${siteUrl}/product/${primarySlug}` : `${siteUrl}/collections`;
+
   const cartLines = (cart || []).map((item, idx) =>
     `${idx + 1}. ${item.name} - ₹${Number(item.price || 0).toLocaleString('en-IN')}`
   ).join('\n');
@@ -42,7 +47,7 @@ ${wishlistLines ? `SAVED WISHLIST ITEMS:\n${wishlistLines}\n` : ''}
 Boutique Privilege Voucher:
 Use promo code: ROKEA20 during checkout for an exclusive 20% courtesy reduction.
 
-Complete your order: ${siteUrl}/collections
+View your product & complete order: ${primaryProductUrl}
 
 Need blouse tailoring assistance or personal styling?
 WhatsApp our boutique concierge: https://wa.me/917010394051
@@ -115,7 +120,7 @@ To opt out of bag reminder updates, reply to this email with "UNSUBSCRIBE".
         "Bag Total Amount": `₹${Number(cartTotal || 0).toLocaleString('en-IN')}`,
         "Wishlist Items": wishlistLines || "None",
         "Privilege Voucher": "ROKEA20",
-        "Direct Boutique Link": `${siteUrl}/collections`,
+        "Direct Boutique Link": primaryProductUrl,
         "WhatsApp Concierge": "https://wa.me/917010394051",
         "Message": summary
       })
@@ -181,20 +186,41 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
     ? window.location.origin
     : 'https://rokeabyrk.com';
 
+  const toSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+
+  const getProductHref = (item) => {
+    if (!item) return `${siteUrl}/collections`;
+    const target = item.slug || toSlug(item.name) || item.id;
+    if (target) return `${siteUrl}/product/${target}`;
+    return `${siteUrl}/collections`;
+  };
+
+  const primaryItem = (hasCart && cart.length > 0) ? cart[0] : ((hasWishlist && wishlist.length > 0) ? wishlist[0] : null);
+  const primaryProductUrl = getProductHref(primaryItem);
+
   const cartItemsHtml = hasCart
     ? cart.map(item => {
         const qty = parseInt(item.quantity || 1, 10);
         const price = parseInt(item.price || 0, 10);
         const lineTotal = price * qty;
+        const itemUrl = getProductHref(item);
+
         return `
       <tr style="border-bottom: 1px solid #E8DFD8;">
         <td style="padding: 14px 10px; width: 75px;">
-          <img src="${item.image || item.img || 'https://via.placeholder.com/80'}" alt="${item.name}" style="width: 70px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #D4AF37;" />
+          <a href="${itemUrl}" target="_blank" style="text-decoration: none; display: block;">
+            <img src="${item.image || item.img || 'https://via.placeholder.com/80'}" alt="${item.name}" style="width: 70px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #D4AF37; display: block;" />
+          </a>
         </td>
         <td style="padding: 14px 12px; vertical-align: middle;">
-          <h4 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: #2A040B; font-weight: 700;">${item.name}</h4>
+          <a href="${itemUrl}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+            <h4 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: #2A040B; font-weight: 700;">${item.name}</h4>
+          </a>
           <p style="margin: 0 0 6px 0; font-family: 'Poppins', Arial, sans-serif; font-size: 11px; color: #7A6A5E; text-transform: uppercase; letter-spacing: 1px;">Exclusive Handcrafted Piece</p>
-          <span style="display: inline-block; background: #FAF5EE; border: 1px solid #EADBCC; color: #6B1327; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Qty: ${qty}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; background: #FAF5EE; border: 1px solid #EADBCC; color: #6B1327; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">Qty: ${qty}</span>
+            <a href="${itemUrl}" target="_blank" style="font-size: 11px; color: #8A1528; font-weight: 600; text-decoration: underline;">View Product &rarr;</a>
+          </div>
         </td>
         <td style="padding: 14px 10px; text-align: right; vertical-align: middle;">
           <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-weight: 700; color: #8A1528;">₹${lineTotal.toLocaleString('en-IN')}</span>
@@ -206,20 +232,30 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
     : '';
 
   const wishlistItemsHtml = hasWishlist
-    ? wishlist.map(item => `
+    ? wishlist.map(item => {
+        const itemUrl = getProductHref(item);
+        return `
       <tr style="border-bottom: 1px solid #E8DFD8;">
         <td style="padding: 12px 10px; width: 60px;">
-          <img src="${item.image || item.img || 'https://via.placeholder.com/60'}" alt="${item.name}" style="width: 55px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #D4AF37;" />
+          <a href="${itemUrl}" target="_blank" style="text-decoration: none; display: block;">
+            <img src="${item.image || item.img || 'https://via.placeholder.com/60'}" alt="${item.name}" style="width: 55px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #D4AF37; display: block;" />
+          </a>
         </td>
         <td style="padding: 12px 12px; vertical-align: middle;">
-          <h4 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; color: #2A040B;">${item.name}</h4>
+          <a href="${itemUrl}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+            <h4 style="margin: 0 0 4px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; color: #2A040B;">${item.name}</h4>
+          </a>
           <span style="font-size: 11px; color: #C9A84C;">★ In High Demand</span>
+          <div style="margin-top: 3px;">
+            <a href="${itemUrl}" target="_blank" style="font-size: 11px; color: #8A1528; font-weight: 600; text-decoration: underline;">View Product &rarr;</a>
+          </div>
         </td>
         <td style="padding: 12px 10px; text-align: right; vertical-align: middle;">
           <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; color: #2A040B;">₹${Number(item.price || 0).toLocaleString('en-IN')}</span>
         </td>
       </tr>
-    `).join('')
+    `;
+      }).join('')
     : '';
 
   return `
@@ -330,7 +366,7 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
           <!-- PRIMARY CALL TO ACTION -->
           <tr>
             <td style="padding: 20px 30px 35px 30px; text-align: center;">
-              <a href="${siteUrl}/collections" style="display: inline-block; background: linear-gradient(135deg, #ECC85B 0%, #D4AF37 50%, #8A6510 100%); color: #160407; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; padding: 15px 38px; border-radius: 30px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);">
+              <a href="${primaryProductUrl}" style="display: inline-block; background: linear-gradient(135deg, #ECC85B 0%, #D4AF37 50%, #8A6510 100%); color: #160407; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; padding: 15px 38px; border-radius: 30px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);">
                 Review Your Bag &rarr;
               </a>
               <p style="margin: 18px 0 0 0; font-size: 12px; color: #8A7B70;">
@@ -415,8 +451,11 @@ export async function processCartAbandonment({ user, cart = [], wishlist = [], t
 
   const cleanDocId = userEmail.replace(/[^a-zA-Z0-9_-]/g, '_');
 
+  const toCleanSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+
   const cartItemsClean = (cart || []).map(i => ({
     id: i.id || '',
+    slug: i.slug || toCleanSlug(i.name) || i.id || '',
     name: i.name || 'Handcrafted Luxury Piece',
     price: parseInt(i.price || 0, 10),
     quantity: parseInt(i.quantity || 1, 10),
@@ -443,7 +482,7 @@ export async function processCartAbandonment({ user, cart = [], wishlist = [], t
     cartTotal,
     cartItems: cartItemsClean,
     wishlistCount: (wishlist || []).length,
-    wishlistItems: (wishlist || []).map(i => ({ id: i.id || '', name: i.name || '', price: parseInt(i.price || 0, 10), image: i.image || i.img || '' })),
+    wishlistItems: (wishlist || []).map(i => ({ id: i.id || '', slug: i.slug || toCleanSlug(i.name) || i.id || '', name: i.name || '', price: parseInt(i.price || 0, 10), image: i.image || i.img || '' })),
     status: 'sent',
     triggerSource,
     timestamp: now.toISOString(),
@@ -592,8 +631,11 @@ export async function updateAbandonedCartRecord({ user, cart = [], wishlist = []
   const userId = user.uid || 'guest';
   const now = new Date();
 
+  const toCleanSlug = (s) => (s || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+
   const cartItemsClean = (cart || []).map(i => ({
     id: i.id || '',
+    slug: i.slug || toCleanSlug(i.name) || i.id || '',
     name: i.name || 'Handcrafted Luxury Piece',
     price: parseInt(i.price || 0, 10),
     quantity: parseInt(i.quantity || 1, 10),
@@ -614,7 +656,7 @@ export async function updateAbandonedCartRecord({ user, cart = [], wishlist = []
     cartTotal,
     cartItems: cartItemsClean,
     wishlistCount: (wishlist || []).length,
-    wishlistItems: (wishlist || []).map(i => ({ id: i.id || '', name: i.name || '', price: parseInt(i.price || 0, 10), image: i.image || i.img || '' })),
+    wishlistItems: (wishlist || []).map(i => ({ id: i.id || '', slug: i.slug || toCleanSlug(i.name) || i.id || '', name: i.name || '', price: parseInt(i.price || 0, 10), image: i.image || i.img || '' })),
     status: 'updated',
     triggerSource: 'item_updated',
     timestamp: now.toISOString(),

@@ -39,6 +39,16 @@ export default function ProductDetailPage() {
     setActiveTab('desc');
   }, [slug, idQuery, product?.id]);
 
+  // Open cart drawer if customer arrived from email link with ?openBag=true or ?cart=open
+  useEffect(() => {
+    if (searchParams.get('openBag') === 'true' || searchParams.get('cart') === 'open') {
+      const timer = setTimeout(() => {
+        if (typeof openCart === 'function') openCart();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, openCart]);
+
   if (!product) {
     return (
       <section className="product-details-section">
