@@ -31,22 +31,24 @@ export async function sendRealEmail({ userEmail, userName, subject, cart = [], w
   const summary = `
 Hello ${userName || 'Valued Customer'},
 
-We noticed you left some exclusive handcrafted pieces in your selection at ROKEA by RK:
+Your handcrafted selection has been saved at ROKEA by RK:
 
-${cartLines ? `🛍️ SHOPPING BAG ITEMS:\n${cartLines}\nTotal Bag Value: ₹${Number(cartTotal || 0).toLocaleString('en-IN')}\n` : ''}
-${wishlistLines ? `💖 SAVED WISHLIST ITEMS:\n${wishlistLines}\n` : ''}
+${cartLines ? `ITEMS IN SHOPPING BAG:\n${cartLines}\nTotal Bag Value: ₹${Number(cartTotal || 0).toLocaleString('en-IN')}\n` : ''}
+${wishlistLines ? `SAVED WISHLIST ITEMS:\n${wishlistLines}\n` : ''}
 
-🎁 SPECIAL VIP PRIVILEGE:
-Use promo code: ROKEA20 to enjoy 20% OFF your order today!
+Boutique Privilege Voucher:
+Use promo code: ROKEA20 during checkout for an exclusive 20% courtesy reduction.
 
-👉 Complete your order here: ${siteUrl}/collections
+Complete your order: ${siteUrl}/collections
 
-Need blouse tailoring or personal styling assistance?
+Need blouse tailoring assistance or personal styling?
 WhatsApp our boutique concierge: https://wa.me/917010394051
 
 ROKEA by RK Luxury Boutique
 Opp. to New Bus Stand, Near Sundaram Theater, Aranthangi - 614616
 Phone: +91 70103 94051 | Email: rokeabyrk@gmail.com
+
+To opt out of bag reminder updates, reply to this email with "UNSUBSCRIBE".
   `.trim();
 
   // Retrieve saved Gmail App Password from localStorage
@@ -63,7 +65,7 @@ Phone: +91 70103 94051 | Email: rokeabyrk@gmail.com
       keepalive: true,
       body: JSON.stringify({
         to: userEmail,
-        subject: subject || '✨ Your Exclusive Collection is Waiting at ROKEA by RK',
+        subject: subject || 'ROKEA by RK - Saved Items in Your Shopping Bag',
         html: emailHtml,
         text: summary,
         gmailAppPassword: savedAppPassword || undefined
@@ -260,13 +262,13 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
           <tr>
             <td style="padding: 35px 30px 20px 30px; text-align: center;">
               <span style="display: inline-block; padding: 4px 14px; background: rgba(201, 168, 76, 0.15); border: 1px solid #D4AF37; border-radius: 20px; font-size: 11px; font-weight: 700; color: #8A6510; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">
-                ✦ Handpicked Selection Saved For You
+                Handcrafted Selection Saved For You
               </span>
               <h1 style="margin: 0 0 14px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; color: #1F050A; font-weight: 700; line-height: 1.3;">
-                Hi ${customerName}, your exclusive piece is waiting.
+                Hello ${customerName}, your selected designs are saved.
               </h1>
               <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #695B50;">
-                We noticed you left some timeless handcrafted sarees and jewellery in your selection. Each design is uniquely crafted in limited quantities — complete your order before pieces sell out!
+                Your handcrafted sarees and heritage jewellery pieces have been safely saved in your shopping bag. You can review your selection and complete your order whenever you are ready.
               </p>
             </td>
           </tr>
@@ -277,7 +279,7 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
             <td style="padding: 10px 30px;">
               <div style="background: #FDFAF6; border: 1px solid #EADBCC; border-radius: 10px; padding: 18px 20px;">
                 <h3 style="margin: 0 0 12px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 16px; color: #6B1327; border-bottom: 1px solid #EADBCC; padding-bottom: 8px;">
-                  🛍️ Items in Your Shopping Bag
+                  Items in Your Shopping Bag
                 </h3>
                 <table width="100%" cellspacing="0" cellpadding="0">
                   ${cartItemsHtml}
@@ -297,7 +299,7 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
             <td style="padding: 15px 30px;">
               <div style="background: #FAFAFA; border: 1px dashed #D4AF37; border-radius: 10px; padding: 16px 20px;">
                 <h3 style="margin: 0 0 10px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: #2A040B;">
-                  💖 Your Saved Wishlist Items
+                  Your Saved Wishlist Items
                 </h3>
                 <table width="100%" cellspacing="0" cellpadding="0">
                   ${wishlistItemsHtml}
@@ -311,9 +313,9 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
           <tr>
             <td style="padding: 15px 30px;">
               <div style="background: linear-gradient(135deg, #2D050D 0%, #5E0F20 100%); border-radius: 10px; padding: 18px 20px; text-align: center; color: #FFFFFF; border: 1px solid #D4AF37;">
-                <span style="display: block; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 2.5px; color: #ECC85B; text-transform: uppercase;">SPECIAL PRIVILEGE</span>
-                <span style="display: block; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #FFF9D6; margin: 4px 0;">ENJOY 20% OFF TODAY</span>
-                <span style="display: block; font-size: 12px; color: #E8D0B5;">Apply your offer at checkout and celebrate your special occasion in style.</span>
+                <span style="display: block; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 2.5px; color: #ECC85B; text-transform: uppercase;">BOUTIQUE COURTESY</span>
+                <span style="display: block; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #FFF9D6; margin: 4px 0;">PROMO CODE: ROKEA20</span>
+                <span style="display: block; font-size: 12px; color: #E8D0B5;">Apply code ROKEA20 at checkout to enjoy a 20% courtesy reduction on your order.</span>
               </div>
             </td>
           </tr>
@@ -322,7 +324,7 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
           <tr>
             <td style="padding: 20px 30px 35px 30px; text-align: center;">
               <a href="${siteUrl}/collections" style="display: inline-block; background: linear-gradient(135deg, #ECC85B 0%, #D4AF37 50%, #8A6510 100%); color: #160407; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; padding: 15px 38px; border-radius: 30px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);">
-                Complete Your Order &rarr;
+                Review Your Bag &rarr;
               </a>
               <p style="margin: 18px 0 0 0; font-size: 12px; color: #8A7B70;">
                 Need styling advice or blouse measurement support?
@@ -354,7 +356,12 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
                 Official Email: <a href="mailto:rokeabyrk@gmail.com" style="color: #ECC85B; text-decoration: none; font-weight: 600;">rokeabyrk@gmail.com</a> | Concierge: +91 70103 94051
               </p>
               <p style="margin: 0; font-size: 10px; color: #7D6B5F;">
-                ✓ Verified Official Communication from ROKEA by RK. Handcrafted with love.
+                Verified Official Communication from ROKEA by RK. Handcrafted with love.
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 10px; color: #8A7B70;">
+                You received this communication because you saved items in your shopping bag at rokeabyrk.com.
+                <br />
+                To stop receiving bag reminders, <a href="mailto:rokeabyrk@gmail.com?subject=Unsubscribe" style="color: #ECC85B; text-decoration: underline;">click here to unsubscribe</a>.
               </p>
             </td>
           </tr>
@@ -416,8 +423,8 @@ export async function processCartAbandonment({ user, cart = [], wishlist = [], t
   const emailHtml = buildReminderEmailHtml({ user, cart: cartItemsClean, wishlist });
 
   const subject = cartItemsClean.length > 0
-    ? `✨ [ROKEA by RK] Did you forget something? Your handcrafted collection is waiting!`
-    : `💖 [ROKEA by RK] Items in your wishlist are in high demand!`;
+    ? `ROKEA by RK - Saved Items in Your Shopping Bag`
+    : `ROKEA by RK - Saved Designs in Your Wishlist`;
 
   const reminderDoc = {
     id: cleanDocId,
