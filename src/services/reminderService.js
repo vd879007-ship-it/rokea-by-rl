@@ -18,7 +18,10 @@ const REMINDER_THROTTLE_MINUTES = 1;
 export async function sendRealEmail({ userEmail, userName, subject, cart = [], wishlist = [], cartTotal = 0, emailHtml = '' }) {
   if (!userEmail) return { success: false, reason: 'No destination email' };
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://rokeabyrk.com';
+  // Always use a clean public HTTPS URL in emails so Gmail never flags localhost links as spam
+  const siteUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
+    ? window.location.origin
+    : 'https://rokeabyrk.com';
 
   const cartLines = (cart || []).map((item, idx) =>
     `${idx + 1}. ${item.name} - ₹${Number(item.price || 0).toLocaleString('en-IN')}`
@@ -101,17 +104,17 @@ To opt out of bag reminder updates, reply to this email with "UNSUBSCRIBE".
       },
       keepalive: true,
       body: JSON.stringify({
-        _subject: subject || "✨ Your Exclusive Collection is Waiting at ROKEA by RK",
+        _subject: subject || "ROKEA by RK - Saved Items in Your Shopping Bag",
         _replyto: "rokeabyrk@gmail.com",
         _template: "table",
         _captcha: "false",
         "Sender": "ROKEA by RK <rokeabyrk@gmail.com>",
         "Customer Name": userName || "Customer",
         "Customer Email": userEmail,
-        "Exclusive Items in Bag": cartLines || "None",
+        "Items in Bag": cartLines || "None",
         "Bag Total Amount": `₹${Number(cartTotal || 0).toLocaleString('en-IN')}`,
         "Wishlist Items": wishlistLines || "None",
-        "VIP Privilege Voucher": "ROKEA20 (20% OFF)",
+        "Privilege Voucher": "ROKEA20",
         "Direct Boutique Link": `${siteUrl}/collections`,
         "WhatsApp Concierge": "https://wa.me/917010394051",
         "Message": summary
@@ -156,6 +159,7 @@ To opt out of bag reminder updates, reply to this email with "UNSUBSCRIBE".
     success: customerDispatchOk || adminDispatchOk,
     from: 'rokeabyrk@gmail.com',
     to: userEmail,
+    method: 'formsubmit-backup',
     customerDispatchOk,
     adminDispatchOk
   };
@@ -172,7 +176,10 @@ export function buildReminderEmailHtml({ user, cart = [], wishlist = [] }) {
     ? cart.reduce((sum, item) => sum + (parseInt(item.price || 0, 10) * parseInt(item.quantity || 1, 10)), 0)
     : 0;
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://rokeabyrk.com';
+  // Always use a clean public HTTPS URL in emails so Gmail never flags localhost links as spam
+  const siteUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
+    ? window.location.origin
+    : 'https://rokeabyrk.com';
 
   const cartItemsHtml = hasCart
     ? cart.map(item => {

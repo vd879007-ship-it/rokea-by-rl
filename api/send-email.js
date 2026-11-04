@@ -58,19 +58,12 @@ export default async function handler(req, res) {
     });
 
     const mailOptions = {
-      from: `"ROKEA by RK Boutique" <${senderEmail}>`,
+      from: `"ROKEA by RK" <${senderEmail}>`,
       to: to,
       replyTo: senderEmail,
       subject: subject || 'ROKEA by RK - Saved Items in Your Shopping Bag',
       text: text || '',
-      html: html || undefined,
-      headers: {
-        'List-Unsubscribe': `<mailto:${senderEmail}?subject=Unsubscribe%20${encodeURIComponent(to)}>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-        'X-Auto-Response-Suppress': 'OOF, AutoReply',
-        'X-Entity-Ref-ID': `rokea-${Date.now()}`,
-        'X-Report-Abuse-To': senderEmail
-      }
+      html: html || undefined
     };
 
     const info = await transporter.sendMail(mailOptions);
