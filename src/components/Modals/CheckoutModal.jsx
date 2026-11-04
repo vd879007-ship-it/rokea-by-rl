@@ -14,6 +14,16 @@ export default function CheckoutModal() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+      if (/FBAN|FBAV|Instagram|WhatsApp|Line|Twitter|Snapchat/i.test(ua)) {
+        setIsInAppBrowser(true);
+      }
+    }
+  }, []);
 
   const handleDismissCheckout = () => {
     closeCheckout();
@@ -60,15 +70,16 @@ export default function CheckoutModal() {
   const totalAmount = cart.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
 
   const loadRazorpaySDK = () => {
+    if (typeof window !== 'undefined' && window.Razorpay) {
+      return Promise.resolve(true);
+    }
     return new Promise((resolve) => {
-      if (typeof window !== 'undefined' && window.Razorpay) {
-        resolve(true);
-        return;
-      }
       const existing = document.getElementById('razorpay-sdk');
       if (existing) {
-        existing.onload = () => resolve(true);
-        existing.onerror = () => resolve(false);
+        if (typeof window !== 'undefined' && window.Razorpay) return resolve(true);
+        existing.addEventListener('load', () => resolve(true), { once: true });
+        existing.addEventListener('error', () => resolve(false), { once: true });
+        setTimeout(() => resolve(typeof window !== 'undefined' && !!window.Razorpay), 2000);
         return;
       }
       const script = document.createElement('script');
@@ -88,21 +99,41 @@ export default function CheckoutModal() {
       return;
     }
 
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 10) {
-      alert("Please enter a valid 10-digit mobile number.");
+    if (!totalAmount || totalAmount <= 0) {
+      alert("Invalid cart amount. Please check your selected items.");
       return;
     }
 
-    setLoading(true);
+    // Clean phone number for Razorpay Indian mobile prefill (strictly 10 digits)
+    let cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.slice(2);
+    } else if (cleanPhone.length === 11 && cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.slice(1);
+    }
 
-    // 1. Ensure Razorpay SDK is loaded
-    const isLoaded = await loadRazorpaySDK();
-    if (!isLoaded || typeof window.Razorpay === 'undefined') {
+    if (cleanPhone.length !== 10) {
+      alert("Please enter a valid 10-digit mobile number (e.g. 9876543210).");
+      return;
+    }
+
+    // Razorpay SDK resolution (prefer synchronous access if already loaded to preserve mobile user gesture context)
+    let RazorpayConstructor = typeof window !== 'undefined' && window.Razorpay ? window.Razorpay : null;
+    if (!RazorpayConstructor) {
+      setLoading(true);
+      const isLoaded = await loadRazorpaySDK();
+      if (isLoaded && typeof window !== 'undefined' && window.Razorpay) {
+        RazorpayConstructor = window.Razorpay;
+      }
+    }
+
+    if (!RazorpayConstructor) {
       setLoading(false);
       alert("Could not load Razorpay payment gateway. Please disable your Ad-Blocker or check your internet connection.");
       return;
     }
+
+    setLoading(true);
 
     const razorpayKey =
       (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_RAZORPAY_KEY_ID) ||
@@ -111,23 +142,38 @@ export default function CheckoutModal() {
 
     const options = {
       key: razorpayKey,
-      amount: totalAmount * 100,
+      amount: Math.round(totalAmount * 100), // In paise (integer)
       currency: "INR",
       name: "ROKEA by RK Boutique",
-      description: "Order by " + name.trim(),
+      description: `Order (${cart.length} item${cart.length > 1 ? 's' : ''}) by ${name.trim()}`,
+      image: "https://static.wixstatic.com/media/9881b8_16e714ef67304ad7812d38944b0b0b16~mv2.png/v1/crop/x_0,y_92,w_5000,h_1065/fill/w_1500,h_320,al_c,q_100,enc_avif,quality_auto/ROKEA%20horizontal%20logo%20(1).png",
       prefill: {
         name: name.trim(),
         contact: cleanPhone,
         email: email.trim() || (currentUser ? currentUser.email : '')
       },
       theme: {
-        color: "#6B1C2E"
+        color: "#6B1C2E",
+        backdrop_color: "rgba(15, 10, 8, 0.85)"
       },
       modal: {
         ondismiss: function () {
           setLoading(false);
           console.log("Razorpay payment modal closed.");
-        }
+        },
+        handleback: true,     // Critical on mobile: handles Android hardware back & UPI app switching
+        backdropclose: false, // Prevents accidental touch dismissal on mobile
+        confirm_close: true   // Ask user confirmation before abandoning payment
+      },
+      retry: {
+        enabled: true,
+        max_count: 3
+      },
+      send_sms_hash: true,
+      notes: {
+        order_platform: "mobile_web_react",
+        customer_phone: cleanPhone,
+        customer_name: name.trim()
       },
       handler: function (response) {
         setLoading(false);
@@ -178,12 +224,25 @@ export default function CheckoutModal() {
     };
 
     try {
-      const rzp = new window.Razorpay(options);
+      const rzp = new RazorpayConstructor(options);
       rzp.on('payment.failed', function (resp) {
         setLoading(false);
         console.error("Razorpay payment.failed:", resp);
-        const desc = resp?.error?.description || "Transaction failed or cancelled.";
-        alert(`Payment Failed: ${desc}\n\nNote: If using a Live Key (rzp_live_), real money is required. For testing, please use a Razorpay Test Key (rzp_test_).`);
+        const err = resp?.error || {};
+        const desc = err.description || "Transaction failed or cancelled.";
+        const reason = err.reason ? ` (${err.reason})` : '';
+        const step = err.step ? ` [at ${err.step}]` : '';
+
+        let help = '';
+        if (err.reason === 'payment_cancelled') {
+          help = '\n\nPayment was cancelled in UPI app or window was closed.';
+        } else if (err.code === 'BAD_REQUEST_ERROR') {
+          help = '\n\nPlease ensure your Razorpay Live merchant account KYC is activated.';
+        } else {
+          help = '\n\nIf money was debited from your account, it will automatically refund within 24-48 hours.';
+        }
+
+        alert(`Payment Incomplete: ${desc}${reason}${step}${help}`);
       });
       rzp.open();
     } catch (err) {
@@ -207,7 +266,9 @@ export default function CheckoutModal() {
         zIndex: 99999
       }}
       onClick={(e) => {
-        if (e.target.id === 'checkoutModal') closeCheckout();
+        if (e.target.id === 'checkoutModal' && !loading) {
+          handleDismissCheckout();
+        }
       }}
     >
       <style>{`
@@ -408,6 +469,27 @@ export default function CheckoutModal() {
                 <div style={{ fontSize: '18px', fontWeight: 800, color: '#6B1C2E' }}>
                   ₹{totalAmount.toLocaleString('en-IN')}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* IN-APP BROWSER NOTICE FOR INSTAGRAM / WHATSAPP MOBILE USERS */}
+          {isInAppBrowser && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF3D0 100%)',
+                border: '1px solid #FFE082',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px'
+              }}
+            >
+              <span style={{ fontSize: '18px', lineHeight: 1 }}>💡</span>
+              <div style={{ fontSize: '11.5px', color: '#6D4C41', lineHeight: 1.45 }}>
+                <strong>Mobile Payment Tip:</strong> In Instagram or WhatsApp browser, UPI auto-redirection can sometimes be blocked. If Google Pay/PhonePe doesn't open, tap the <strong>top ⋮ or ⋯ menu</strong> and choose <strong>"Open in Chrome / Safari"</strong>.
               </div>
             </div>
           )}

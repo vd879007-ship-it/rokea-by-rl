@@ -37,8 +37,15 @@
   <link rel="stylesheet" href="/product-details.css">
   <link rel="stylesheet" href="/about.css">
 
-  <!-- Razorpay SDK -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+  <!-- Razorpay SDK (preloaded without defer for instant mobile response) -->
+  <script id="razorpay-sdk" src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    /* Ensure Razorpay modal iframe is always at the topmost z-index on mobile Safari and Chrome */
+    .razorpay-container {
+      z-index: 2147483647 !important;
+      position: fixed !important;
+    }
+  </style>
   <!-- SortableJS -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
 
