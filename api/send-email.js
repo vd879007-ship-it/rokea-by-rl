@@ -1,10 +1,10 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 /**
  * Serverless API handler to send emails directly from rokeabyrk@gmail.com
  * Supports Vercel serverless runtime and local environments.
  */
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -31,14 +31,16 @@ module.exports = async function handler(req, res) {
       gmailAppPassword ||
       process.env.GMAIL_APP_PASSWORD ||
       process.env.ROKEA_GMAIL_PASS ||
+      process.env.VITE_GMAIL_APP_PASSWORD ||
       ''
     ).replace(/\s+/g, ''); // strip any spaces like 'abcd efgh ijkl mnop' -> 'abcdefghijklmnop'
 
     if (!appPassword) {
+      console.warn('[SMTP] Missing GMAIL_APP_PASSWORD in environment variables and payload');
       return res.status(400).json({
         success: false,
         error: 'GMAIL_APP_PASSWORD_REQUIRED',
-        message: 'Google 16-character App Password is required to send from rokeabyrk@gmail.com. Please set it in Admin Settings or .env (GMAIL_APP_PASSWORD).'
+        message: 'Google 16-character App Password is required to send from rokeabyrk@gmail.com. Please set GMAIL_APP_PASSWORD in Vercel Project Settings -> Environment Variables.'
       });
     }
 
@@ -81,4 +83,4 @@ module.exports = async function handler(req, res) {
       message: err.message || 'Failed to dispatch email via Gmail SMTP.'
     });
   }
-};
+}

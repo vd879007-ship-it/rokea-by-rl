@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const PROJECT_ID = 'rokeya-3ccaa';
 
@@ -67,7 +67,7 @@ async function getProductBySlugOrId(slug) {
   return null;
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const { slug } = req.query;
   
   if (!slug) {
